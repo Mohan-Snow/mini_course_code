@@ -90,7 +90,7 @@ func TestReadAll(t *testing.T) {
 			name: "ReadAll with buffer size equal to content length",
 			args: args{
 				cr:      NewCountingReader(bytes.NewReader([]byte("Sample Text"))),
-				bufSize: 10,
+				bufSize: 11,
 			},
 			want:    "sample text",
 			wantErr: false,
