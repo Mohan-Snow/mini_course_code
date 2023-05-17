@@ -65,7 +65,7 @@ func (s *Service) getOrderByID(id int64) (*order, error) {
 }
 
 // Ожидает ответа или возвращение ошибки, если ответ не был получен вовремя.
-func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int) (*order, error) {
+func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int64) (*order, error) {
 	//contextWithTimeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	//defer cancel()
 	//wg := sync.WaitGroup{}
@@ -74,7 +74,7 @@ func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int
 	//	defer wg.Done()
 	//}()
 	//wg.Wait()
-	order, err := s.getOrderByID(int64(id))
+	order, err := s.getOrderByID(id)
 	if err != nil {
 		return nil, ErrService
 	}
@@ -111,7 +111,7 @@ func main() {
 		// Pass a context with a timeout to tell a blocking function that it
 		// should abandon its work after the timeout elapses.
 		ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
-		result, err := service.getOrderByIDWrapper(ctx, i)
+		result, err := service.getOrderByIDWrapper(ctx, int64(i))
 		fmt.Println(result, err)
 		cancel()
 	}
