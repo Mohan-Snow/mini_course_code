@@ -29,22 +29,26 @@ type Service struct {
 	idsToFail map[int64]struct{}
 }
 
-func New(idsThatReturnsError map[int64]struct{}) *Service {
-	if idsThatReturnsError == nil {
-		idsThatReturnsError = make(map[int64]struct{})
+func New(idsThatReturnError map[int64]struct{}) *Service {
+	if idsThatReturnError == nil {
+		idsThatReturnError = make(map[int64]struct{})
 	}
 	return &Service{
-		idsToFail: idsThatReturnsError,
+		idsToFail: idsThatReturnError,
 	}
 }
 
+// Возвращает заказ и возможную ошибку. Внутри Sleep эмитирует выполнение полезной нагрузки.
 func (s *Service) getOrderByID(id int64) (*order, error) {
-	time.Sleep(time.Duration(TestRandFunc(2000)) * time.Millisecond)
+	randMultiplier := TestRandFunc(10)
+	fmt.Printf("Sleep=%d ", randMultiplier)
+	time.Sleep(time.Duration(randMultiplier) * time.Second)
+	//time.Sleep(3 * time.Second)
 
 	// some user ids fails
-	if _, ok := s.idsToFail[id]; ok {
-		return nil, ErrService
-	}
+	//if _, ok := s.idsToFail[id]; ok {
+	//	return nil, ErrService
+	//}
 
 	return &order{
 		value: int64(rand.Intn(1000)),
@@ -60,8 +64,26 @@ func (s *Service) getOrderByID(id int64) (*order, error) {
 	}, nil
 }
 
-func (s *Service) getOrderByIDWrapper(ctx context.Context, id int64) (*order, error) {
-	return s.getOrderByID(id)
+// Ожидает ответа или возвращение ошибки, если ответ не был получен вовремя.
+func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int) (*order, error) {
+	//contextWithTimeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	//defer cancel()
+	//wg := sync.WaitGroup{}
+	//wg.Add(1)
+	//go func() {
+	//	defer wg.Done()
+	//}()
+	//wg.Wait()
+	order, err := s.getOrderByID(int64(id))
+	if err != nil {
+		return nil, ErrService
+	}
+	select {
+	case <-contextWithTimeout.Done():
+		return nil, ErrTimeout
+	default:
+		return order, nil
+	}
 }
 
 func main() {
@@ -75,21 +97,22 @@ func main() {
 	service := New(usersWithErr)
 
 	// user with err
-	fmt.Println(service.getOrderByID(1))
+	//fmt.Println(service.getOrderByID(1))
 	// user with err
-	fmt.Println(service.getOrderByID(2))
+	//fmt.Println(service.getOrderByID(2))
 	// user with err
-	fmt.Println(service.getOrderByID(3))
+	//fmt.Println(service.getOrderByID(3))
 
-	fmt.Println(service.getOrderByID(4))
-	fmt.Println(service.getOrderByID(5))
+	//fmt.Println(service.getOrderByID(4))
+	//fmt.Println(service.getOrderByID(5))
 
-	for i := 0; i < 100; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 800*time.Millisecond)
-		result, err := service.getOrderByIDWrapper(ctx, 5)
-		
+	for i := 0; i < 10; i++ {
+		i := i
+		// Pass a context with a timeout to tell a blocking function that it
+		// should abandon its work after the timeout elapses.
+		ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+		result, err := service.getOrderByIDWrapper(ctx, i)
 		fmt.Println(result, err)
-
 		cancel()
 	}
 
