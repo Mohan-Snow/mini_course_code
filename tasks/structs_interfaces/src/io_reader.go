@@ -34,13 +34,12 @@ func (cr *CountingToLowerReaderImpl) Read(p []byte) (int, error) {
 
 func (cr *CountingToLowerReaderImpl) ReadAll(bufSize int) (string, error) {
 	stringBuffer := make([]byte, bufSize)
-	readBytes, err := cr.Reader.Read(stringBuffer)
+	readBytes, err := cr.Read(stringBuffer)
 	builder := strings.Builder{}
-	for ; err == nil; readBytes, err = cr.Reader.Read(stringBuffer) {
+	for ; err == nil; readBytes, err = cr.Read(stringBuffer) {
 		builder.Write(stringBuffer[:readBytes])
 	}
-	transformedString := strings.ToLower(builder.String())
-	return transformedString, nil
+	return builder.String(), nil
 }
 
 func (cr *CountingToLowerReaderImpl) BytesRead() int64 {
