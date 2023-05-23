@@ -64,6 +64,11 @@ func (s *Service) getOrderByID(id int64) (*order, error) {
 	}, nil
 }
 
+type orderResponse struct {
+	order *order
+	err   error
+}
+
 // Ожидает ответа или возвращение ошибки, если ответ не был получен вовремя.
 func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int64) (*order, error) {
 	//contextWithTimeout, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -74,24 +79,20 @@ func (s *Service) getOrderByIDWrapper(contextWithTimeout context.Context, id int
 	//	defer wg.Done()
 	//}()
 	//wg.Wait()
-	orderChannel := make(chan *order)
-	errChannel := make(chan error)
+	//orderChannel := make(chan *order)
+	//errChannel := make(chan error)
+	orderRespChannel := make(chan orderResponse, 1)
 
 	go func() {
 		order, err := s.getOrderByID(id)
-		if err != nil {
-			errChannel <- err
-		}
-		orderChannel <- order
+		orderRespChannel <- orderResponse{order: order, err: err}
 	}()
 
 	select {
 	case <-contextWithTimeout.Done():
 		return nil, ErrTimeout
-	case order := <-orderChannel:
-		return order, nil
-	case <-errChannel:
-		return nil, ErrService
+	case resp := <-orderRespChannel:
+		return resp.order, resp.err
 	}
 }
 
