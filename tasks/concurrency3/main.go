@@ -17,7 +17,16 @@ type ringBuffer struct {
 }
 
 func (r *ringBuffer) Run() {
-
+	defer close(r.outCh)
+	for inChanVal := range r.inCh {
+		select {
+		case r.outCh <- inChanVal: // если в буффере канала есть место -> записываем сразу туда
+		default: // если канал заполнен -> выччитываем старую запись и записываем новую
+			oldVal := <-r.outCh
+			fmt.Printf("Old value %d\n", oldVal)
+			r.outCh <- inChanVal
+		}
+	}
 }
 
 func main() {
